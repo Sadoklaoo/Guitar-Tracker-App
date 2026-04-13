@@ -93,9 +93,8 @@ Interactive docs at `http://localhost:8000/docs`
 
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/chords` | List all chords |
-| POST | `/chords` | Create a chord |
-| GET | `/chords/{id}` | Get a chord |
+| GET | `/chords` | List all chords from local JSON |
+| GET | `/chords/{id}` | Get a chord from local JSON |
 
 ### Fingerstyle Songs
 
@@ -140,12 +139,13 @@ GET /fingerstyle?technique=Classical&difficulty=Advanced&tuning=DADGAD&min_ratin
 
 ```json
 {
-  "name": "Em7",
-  "finger_positions": [
-    { "string": 2, "fret": 2, "finger": 2 },
-    { "string": 3, "fret": 2, "finger": 3 }
-  ],
-  "diagram_data": null
+  "id": "G",
+  "name": "G",
+  "frets": [3, 2, 0, 0, 0, 3],
+  "fingers": [2, 1, null, null, null, 3],
+  "base_fret": 1,
+  "notes": "Standard open G chord",
+  "diagram_data": "e|--3--\nB|--0--\nG|--0--\nD|--0--\nA|--2--\nE|--3--"
 }
 ```
 

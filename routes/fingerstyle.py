@@ -3,7 +3,7 @@ from bson import ObjectId
 from datetime import datetime, timezone
 from typing import Optional
 
-from database import get_fingerstyle_collection, get_chords_collection, get_practice_collection
+from database import get_fingerstyle_collection, get_practice_collection
 from models.fingerstyle import (
     FingerstyleSongCreate,
     FingerstyleSongUpdate,
@@ -13,7 +13,7 @@ from models.fingerstyle import (
 )
 from models.chord import ChordResponse
 from models.practice import PracticeCreate, PracticeResponse
-from utils import doc_to_dict, valid_object_id
+from utils import doc_to_dict, get_chords_by_names, valid_object_id
 
 router = APIRouter(prefix="/fingerstyle", tags=["Fingerstyle Songs"])
 
@@ -107,14 +107,13 @@ async def get_chords_for_fingerstyle_song(id: str):
     if not valid_object_id(id):
         raise HTTPException(status_code=400, detail="Invalid ID")
     fs_col = get_fingerstyle_collection()
-    chords_col = get_chords_collection()
 
     song = await fs_col.find_one({"_id": ObjectId(id)})
     if not song:
         raise HTTPException(status_code=404, detail="Fingerstyle song not found")
 
     chord_names = song.get("chords", [])
-    chords = await chords_col.find({"name": {"$in": chord_names}}).to_list(length=None)
+    chords = get_chords_by_names(chord_names)
     return [doc_to_dict(c) for c in chords]
 
 

@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException, status
 from bson import ObjectId
 from datetime import datetime, timezone
 
-from database import get_songs_collection, get_chords_collection
+from database import get_songs_collection
 from models.song import SongCreate, SongUpdate, SongResponse
 from models.chord import ChordResponse
-from utils import doc_to_dict, valid_object_id
+from utils import doc_to_dict, get_chords_by_names, valid_object_id
 
 router = APIRouter(prefix="/songs", tags=["Songs"])
 
@@ -71,12 +71,11 @@ async def get_chords_for_song(id: str):
     if not valid_object_id(id):
         raise HTTPException(status_code=400, detail="Invalid song ID")
     songs_col = get_songs_collection()
-    chords_col = get_chords_collection()
 
     song = await songs_col.find_one({"_id": ObjectId(id)})
     if not song:
         raise HTTPException(status_code=404, detail="Song not found")
 
     chord_names = song.get("chords", [])
-    chords = await chords_col.find({"name": {"$in": chord_names}}).to_list(length=None)
+    chords = get_chords_by_names(chord_names)
     return [doc_to_dict(c) for c in chords]

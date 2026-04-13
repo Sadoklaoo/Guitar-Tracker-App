@@ -31,10 +31,6 @@ def get_songs_collection():
     return get_database()["songs"]
 
 
-def get_chords_collection():
-    return get_database()["chords"]
-
-
 def get_practice_collection():
     return get_database()["practice_sessions"]
 
