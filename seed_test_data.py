@@ -11,7 +11,13 @@ TEST_SONGS = [
         "genre": "Folk Rock",
         "difficulty": "Intermediate",
         "rating": 5,
-        "chord_text": "G*4 D*2 Em C",
+        "chord_sequence": [
+            {"name": "G", "repeats": 4},
+            {"name": "D", "repeats": 2},
+            {"name": "Em", "repeats": 2},
+            {"name": "C", "repeats": 2},
+        ],
+        "chords": ["G", "D", "Em", "C"],
     },
     {
         "title": "Wonderwall",
@@ -25,6 +31,7 @@ TEST_SONGS = [
             {"name": "Dsus4", "repeats": 2},
             {"name": "A7sus4", "repeats": 4},
         ],
+        "chords": ["Em7", "G", "Dsus4", "A7sus4"],
     },
     {
         "title": "Hotel California",
@@ -32,7 +39,30 @@ TEST_SONGS = [
         "genre": "Rock",
         "difficulty": "Advanced",
         "rating": 5,
+        "chord_sequence": [
+            {"name": "Bm", "repeats": 2},
+            {"name": "F#", "repeats": 2},
+            {"name": "A", "repeats": 2},
+            {"name": "E", "repeats": 2},
+            {"name": "G", "repeats": 2},
+            {"name": "D", "repeats": 2},
+            {"name": "Em", "repeats": 2},
+        ],
         "chords": ["Bm", "F#", "A", "E", "G", "D", "Em"],
+    },
+    {
+        "title": "Let It Be",
+        "artist": "The Beatles",
+        "genre": "Pop Rock",
+        "difficulty": "Beginner",
+        "rating": 4,
+        "chord_sequence": [
+            {"name": "C", "repeats": 2},
+            {"name": "G", "repeats": 2},
+            {"name": "Am", "repeats": 2},
+            {"name": "F", "repeats": 2},
+        ],
+        "chords": ["C", "G", "Am", "F"],
     },
 ]
 

@@ -65,15 +65,7 @@ async def get_song(id: str):
         chord_names = build_chords_from_sequence(song["chord_sequence"])
         song["chords"] = chord_names
 
-    if song.get("chord_sequence"):
-        song["chord_count"] = sum(
-            item.get("repeats", 1) for item in song["chord_sequence"] if isinstance(item, dict)
-        )
-    else:
-        song["chord_count"] = len(chord_names)
 
-    chord_objects = get_chords_by_names(chord_names)
-    song["chord_details"] = [doc_to_dict(c) for c in chord_objects]
     return song
 
 

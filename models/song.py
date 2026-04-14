@@ -49,8 +49,6 @@ class SongResponse(BaseModel):
     chords: list[str] = Field(default_factory=list)
     chord_sequence: Optional[list[SongChordSegment]] = None
     created_at: datetime
-    chord_count: Optional[int] = None
-    chord_details: Optional[list[ChordResponse]] = None
 
     class Config:
         populate_by_name = True
