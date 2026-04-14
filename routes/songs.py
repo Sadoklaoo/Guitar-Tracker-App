@@ -35,7 +35,13 @@ async def get_song(id: str):
     song = await collection.find_one({"_id": ObjectId(id)})
     if not song:
         raise HTTPException(status_code=404, detail="Song not found")
-    return doc_to_dict(song)
+
+    song = doc_to_dict(song)
+    chord_names = song.get("chords", []) or []
+    chord_objects = get_chords_by_names(chord_names)
+    song["chord_count"] = len(chord_names)
+    song["chord_details"] = [doc_to_dict(c) for c in chord_objects]
+    return song
 
 
 @router.put("/{id}", response_model=SongResponse)

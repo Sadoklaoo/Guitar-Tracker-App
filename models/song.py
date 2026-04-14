@@ -3,6 +3,8 @@ from typing import Optional
 from datetime import datetime
 from enum import Enum
 
+from models.chord import ChordResponse
+
 
 class DifficultyLevel(str, Enum):
     beginner = "Beginner"
@@ -37,6 +39,8 @@ class SongResponse(BaseModel):
     rating: int
     chords: list[str]
     created_at: datetime
+    chord_count: Optional[int] = None
+    chord_details: Optional[list[ChordResponse]] = None
 
     class Config:
         populate_by_name = True

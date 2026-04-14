@@ -3,6 +3,7 @@ from bson import ObjectId
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
+from typing import Optional
 
 
 def doc_to_dict(doc: dict) -> dict:
