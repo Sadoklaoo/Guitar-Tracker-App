@@ -1,4 +1,5 @@
 import json
+import re
 from bson import ObjectId
 from datetime import datetime
 from functools import lru_cache
@@ -101,3 +102,101 @@ def get_chords_by_names(names: list[str]) -> list[dict]:
 
     chord_map = {chord.get("name", "").lower(): chord for chord in load_chord_definitions()}
     return [chord_map[name.lower()] for name in names if name and name.lower() in chord_map]
+
+
+def parse_chord_text(text: str) -> list[dict]:
+    """Parse a simple chord text string into sequence items.
+
+    Supports examples like:
+    - G*4 D*2 Em
+    - G x4, D x2, Em
+    - G, D, Em
+    """
+    if not text:
+        return []
+
+    sequence = []
+    chunks = re.split(r"[\n,]+", text.strip())
+    for chunk in chunks:
+        if not chunk:
+            continue
+
+        for match in re.finditer(r"(?P<name>[^,*x\n]+?)(?:\s*(?:\*|x)\s*(?P<repeats>\d+))?(?=\s|$)", chunk.strip(), re.IGNORECASE):
+            name = match.group("name").strip()
+            if not name:
+                continue
+
+            repeats = int(match.group("repeats")) if match.group("repeats") else 1
+            if repeats < 1:
+                repeats = 1
+
+            sequence.append({"name": name, "repeats": repeats})
+
+    if not sequence:
+        raise ValueError("No valid chords found in chord_text")
+
+    return sequence
+
+
+def build_chords_from_sequence(sequence: list[dict]) -> list[str]:
+    """Extract unique chord names from a chord sequence in order."""
+    if not sequence:
+        return []
+
+    seen = set()
+    chords = []
+    for item in sequence:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if not name:
+            continue
+        key = str(name).lower()
+        if key not in seen:
+            seen.add(key)
+            chords.append(str(name))
+    return chords
+
+
+def extract_chords_from_fingerstyle_sequence(sequence: list[dict]) -> list[str]:
+    """Extract unique chord values from a fingerstyle performance sequence."""
+    if not sequence:
+        return []
+
+    seen = set()
+    chords = []
+    for item in sequence:
+        if not isinstance(item, dict):
+            continue
+        if item.get("type") != "chord":
+            continue
+        value = item.get("value")
+        if not value:
+            continue
+        key = str(value).lower()
+        if key not in seen:
+            seen.add(key)
+            chords.append(str(value))
+    return chords
+
+
+def derive_chords_from_fingerstyle_data(sequence: list[dict], chord_ids: list[str] | None = None) -> list[str]:
+    """Derive the chord list from a fingerstyle sequence or fallback legacy chordIds."""
+    chord_ids = chord_ids or []
+    derived = extract_chords_from_fingerstyle_sequence(sequence)
+    if derived:
+        return derived
+
+    if not chord_ids:
+        return []
+
+    seen = set()
+    chords = []
+    for chord in chord_ids:
+        if not chord:
+            continue
+        key = str(chord).lower()
+        if key not in seen:
+            seen.add(key)
+            chords.append(str(chord))
+    return chords

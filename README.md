@@ -1,6 +1,6 @@
 # 🎸 Guitar Tracker API
 
-A FastAPI backend for tracking songs, chords, fingerstyle pieces, and practice sessions. Built with Motor (async MongoDB), Pydantic v2, and Uvicorn.
+A FastAPI backend for tracking songs, chords, and fingerstyle pieces. Built with Motor (async MongoDB), Pydantic v2, and Uvicorn.
 
 ---
 
@@ -28,12 +28,10 @@ guitar_backend/
 ├── models/
 │   ├── song.py           # Song schema
 │   ├── chord.py          # Chord schema
-│   ├── practice.py       # Practice session schema
 │   └── fingerstyle.py    # Fingerstyle song schema
 └── routes/
     ├── songs.py          # /songs endpoints
     ├── chords.py         # /chords endpoints
-    ├── practice.py       # /songs/{id}/practice endpoints
     └── fingerstyle.py    # /fingerstyle endpoints
 ```
 
@@ -86,8 +84,6 @@ Interactive docs at `http://localhost:8000/docs`
 | PUT | `/songs/{id}` | Update a song |
 | DELETE | `/songs/{id}` | Delete a song |
 | GET | `/songs/{id}/chords` | Get chords used in a song |
-| POST | `/songs/{id}/practice` | Log a practice session |
-| GET | `/songs/{id}/practice` | Get practice history |
 
 ### Chords
 
@@ -106,8 +102,6 @@ Interactive docs at `http://localhost:8000/docs`
 | PUT | `/fingerstyle/{id}` | Update a fingerstyle song |
 | DELETE | `/fingerstyle/{id}` | Delete a fingerstyle song |
 | GET | `/fingerstyle/{id}/chords` | Get chords used in the piece |
-| POST | `/fingerstyle/{id}/practice` | Log a practice session |
-| GET | `/fingerstyle/{id}/practice` | Get practice history |
 | GET | `/fingerstyle/meta/techniques` | List all valid technique names |
 
 #### Fingerstyle filter query params
@@ -122,6 +116,8 @@ GET /fingerstyle?technique=Classical&difficulty=Advanced&tuning=DADGAD&min_ratin
 
 ### Song
 
+A song can now be created with either a simple chord list, a chord sequence with repeat counts, or quick text input.
+
 ```json
 {
   "title": "Blackbird",
@@ -130,6 +126,32 @@ GET /fingerstyle?technique=Classical&difficulty=Advanced&tuning=DADGAD&min_ratin
   "difficulty": "Intermediate",
   "rating": 5,
   "chords": ["G", "Am", "Em"]
+}
+```
+
+```json
+{
+  "title": "Blackbird",
+  "artist": "The Beatles",
+  "genre": "Rock",
+  "difficulty": "Intermediate",
+  "rating": 5,
+  "chord_sequence": [
+    {"name": "G", "repeats": 4},
+    {"name": "Am", "repeats": 2},
+    {"name": "Em", "repeats": 1}
+  ]
+}
+```
+
+```json
+{
+  "title": "Blackbird",
+  "artist": "The Beatles",
+  "genre": "Rock",
+  "difficulty": "Intermediate",
+  "rating": 5,
+  "chord_text": "G*4 Am*2 Em"
 }
 ```
 
@@ -149,16 +171,9 @@ GET /fingerstyle?technique=Classical&difficulty=Advanced&tuning=DADGAD&min_ratin
 }
 ```
 
-### Practice Session
-
-```json
-{
-  "duration_minutes": 30,
-  "notes": "Worked on the bridge section"
-}
-```
-
 ### Fingerstyle Song
+
+Fingerstyle songs now store a full performance sequence containing both notes and chords.
 
 ```json
 {
@@ -175,7 +190,11 @@ GET /fingerstyle?technique=Classical&difficulty=Advanced&tuning=DADGAD&min_ratin
   "capo": 0,
   "tab_url": "https://example.com/tab",
   "arrangement_notes": "Focus on dynamic contrast in the middle section",
-  "chords": ["Dbmaj7", "Abmaj7"]
+  "sequence": [
+    {"type": "chord", "value": "Dbmaj7", "repeats": 4},
+    {"type": "note", "value": "F4", "duration": "quarter"},
+    {"type": "chord", "value": "Abmaj7", "repeats": 2}
+  ]
 }
 ```
 
@@ -190,7 +209,6 @@ GET /fingerstyle?technique=Classical&difficulty=Advanced&tuning=DADGAD&min_ratin
 |---|---|
 | `songs` | Standard songs |
 | `chords` | Chord library |
-| `practice_sessions` | Practice logs for both song types |
 | `fingerstyle_songs` | Fingerstyle-specific songs |
 
 ---
@@ -199,5 +217,6 @@ GET /fingerstyle?technique=Classical&difficulty=Advanced&tuning=DADGAD&min_ratin
 
 - All endpoints are async using Motor
 - ObjectIds are serialized to strings in all responses
-- Fingerstyle practice sessions are tagged with `song_type: "fingerstyle"` in the `practice_sessions` collection to distinguish them from regular song sessions
+- Fingerstyle songs now store a full `sequence` payload for notes and chords
+- `.env` is required at startup — the app will fail to connect without `MONGO_URL`
 - `.env` is required at startup — the app will fail to connect without `MONGO_URL`

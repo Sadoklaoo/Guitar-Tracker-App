@@ -7,7 +7,6 @@ import traceback
 from database import connect_db, close_db
 from routes.songs import router as songs_router
 from routes.chords import router as chords_router
-from routes.practice import router as practice_router
 from routes.fingerstyle import router as fingerstyle_router
 
 
@@ -20,7 +19,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Guitar Tracker API",
-    description="Track songs, chords, fingerstyle pieces, and practice sessions.",
+    description="Track songs, chords, and fingerstyle pieces.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -45,7 +44,6 @@ async def catch_exceptions(request: Request, call_next):
 
 app.include_router(songs_router)
 app.include_router(chords_router)
-app.include_router(practice_router)
 app.include_router(fingerstyle_router)
 
 

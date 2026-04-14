@@ -3,7 +3,7 @@ from bson import ObjectId
 from datetime import datetime, timezone
 from typing import Optional
 
-from database import get_fingerstyle_collection, get_practice_collection
+from database import get_fingerstyle_collection
 from models.fingerstyle import (
     FingerstyleSongCreate,
     FingerstyleSongUpdate,
@@ -12,8 +12,12 @@ from models.fingerstyle import (
     DifficultyLevel,
 )
 from models.chord import ChordResponse
-from models.practice import PracticeCreate, PracticeResponse
-from utils import doc_to_dict, get_chords_by_names, valid_object_id
+from utils import (
+    doc_to_dict,
+    get_chords_by_names,
+    valid_object_id,
+    derive_chords_from_fingerstyle_data,
+)
 
 router = APIRouter(prefix="/fingerstyle", tags=["Fingerstyle Songs"])
 
@@ -49,6 +53,9 @@ async def list_fingerstyle_songs(
 async def create_fingerstyle_song(payload: FingerstyleSongCreate):
     collection = get_fingerstyle_collection()
     doc = payload.model_dump()
+    sequence = doc.get("sequence") or []
+    chord_ids = doc.get("chordIds") or []
+    doc["chords"] = derive_chords_from_fingerstyle_data(sequence, chord_ids)
     doc["created_at"] = datetime.now(timezone.utc)
     result = await collection.insert_one(doc)
     created = await collection.find_one({"_id": result.inserted_id})
@@ -78,6 +85,18 @@ async def update_fingerstyle_song(id: str, payload: FingerstyleSongUpdate):
     update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
+
+    if "sequence" in update_data or "chordIds" in update_data:
+        sequence = update_data.get("sequence")
+        chord_ids = update_data.get("chordIds")
+        computed_chords = derive_chords_from_fingerstyle_data(
+            sequence or [],
+            chord_ids,
+        )
+        update_data["chords"] = computed_chords
+        if "sequence" in update_data and update_data.get("sequence") is not None:
+            update_data.setdefault("chordIds", [])
+
     result = await collection.find_one_and_update(
         {"_id": ObjectId(id)},
         {"$set": update_data},
@@ -112,49 +131,16 @@ async def get_chords_for_fingerstyle_song(id: str):
     if not song:
         raise HTTPException(status_code=404, detail="Fingerstyle song not found")
 
-    chord_names = song.get("chords", [])
+    chord_names = song.get("chords", []) or []
+    if not chord_names and song.get("sequence"):
+        chord_names = [
+            item.get("value")
+            for item in song["sequence"]
+            if isinstance(item, dict) and item.get("type") == "chord" and item.get("value")
+        ]
+
     chords = get_chords_by_names(chord_names)
     return [doc_to_dict(c) for c in chords]
-
-
-# ── Practice sessions for a fingerstyle song ─────────────────────────────────
-
-@router.post("/{id}/practice", response_model=PracticeResponse, status_code=status.HTTP_201_CREATED)
-async def log_fingerstyle_practice(id: str, payload: PracticeCreate):
-    if not valid_object_id(id):
-        raise HTTPException(status_code=400, detail="Invalid ID")
-    fs_col = get_fingerstyle_collection()
-    song = await fs_col.find_one({"_id": ObjectId(id)})
-    if not song:
-        raise HTTPException(status_code=404, detail="Fingerstyle song not found")
-
-    practice_col = get_practice_collection()
-    doc = payload.model_dump()
-    doc["song_id"] = id
-    doc["song_type"] = "fingerstyle"
-    doc["practiced_at"] = datetime.now(timezone.utc)
-    result = await practice_col.insert_one(doc)
-    created = await practice_col.find_one({"_id": result.inserted_id})
-    return doc_to_dict(created)
-
-
-@router.get("/{id}/practice", response_model=list[PracticeResponse])
-async def get_fingerstyle_practice_history(id: str):
-    if not valid_object_id(id):
-        raise HTTPException(status_code=400, detail="Invalid ID")
-    fs_col = get_fingerstyle_collection()
-    song = await fs_col.find_one({"_id": ObjectId(id)})
-    if not song:
-        raise HTTPException(status_code=404, detail="Fingerstyle song not found")
-
-    practice_col = get_practice_collection()
-    sessions = (
-        await practice_col
-        .find({"song_id": id, "song_type": "fingerstyle"})
-        .sort("practiced_at", -1)
-        .to_list(length=None)
-    )
-    return [doc_to_dict(s) for s in sessions]
 
 
 # ── Techniques reference ──────────────────────────────────────────────────────

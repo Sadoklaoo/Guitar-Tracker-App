@@ -5,9 +5,27 @@ from datetime import datetime, timezone
 from database import get_songs_collection
 from models.song import SongCreate, SongUpdate, SongResponse
 from models.chord import ChordResponse
-from utils import doc_to_dict, get_chords_by_names, valid_object_id
+from utils import (
+    doc_to_dict,
+    get_chords_by_names,
+    valid_object_id,
+    build_chords_from_sequence,
+    parse_chord_text,
+)
 
 router = APIRouter(prefix="/songs", tags=["Songs"])
+
+
+def normalize_song_payload(data: dict) -> dict:
+    if data.get("chord_text") and not data.get("chord_sequence"):
+        data["chord_sequence"] = parse_chord_text(data["chord_text"])
+
+    if data.get("chord_sequence") is not None:
+        data["chords"] = build_chords_from_sequence(data["chord_sequence"])
+    elif data.get("chords") is None:
+        data["chords"] = []
+
+    return data
 
 
 @router.get("", response_model=list[SongResponse])
@@ -21,6 +39,11 @@ async def list_songs():
 async def create_song(payload: SongCreate):
     collection = get_songs_collection()
     doc = payload.model_dump()
+    try:
+        doc = normalize_song_payload(doc)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
     doc["created_at"] = datetime.now(timezone.utc)
     result = await collection.insert_one(doc)
     created = await collection.find_one({"_id": result.inserted_id})
@@ -38,8 +61,18 @@ async def get_song(id: str):
 
     song = doc_to_dict(song)
     chord_names = song.get("chords", []) or []
+    if not chord_names and song.get("chord_sequence"):
+        chord_names = build_chords_from_sequence(song["chord_sequence"])
+        song["chords"] = chord_names
+
+    if song.get("chord_sequence"):
+        song["chord_count"] = sum(
+            item.get("repeats", 1) for item in song["chord_sequence"] if isinstance(item, dict)
+        )
+    else:
+        song["chord_count"] = len(chord_names)
+
     chord_objects = get_chords_by_names(chord_names)
-    song["chord_count"] = len(chord_names)
     song["chord_details"] = [doc_to_dict(c) for c in chord_objects]
     return song
 
@@ -52,6 +85,12 @@ async def update_song(id: str, payload: SongUpdate):
     update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
+
+    try:
+        update_data = normalize_song_payload(update_data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
     result = await collection.find_one_and_update(
         {"_id": ObjectId(id)},
         {"$set": update_data},
